@@ -215,7 +215,7 @@ function extractSpreadsheetFields() {
     highlightKeywordInComment_(sheet, rowNumber, commentCol, comment, keyword);
   });
 
-  notify_(`Processed ${processedCount} row(s).`);
+  notify_(`Extracted Keyword, Subreddit, Link, and Comment for ${processedCount} row(s).`);
 }
 
 /**
