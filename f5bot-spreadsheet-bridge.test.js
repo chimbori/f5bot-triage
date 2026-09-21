@@ -92,7 +92,8 @@ test('identifies blocked subreddits in sample emails', () => {
 });
 
 test('imports blocked messages before extraction marks them for deletion', () => {
-  const testContext = createScriptContext().context;
+  const testSetup = createScriptContext();
+  const testContext = testSetup.context;
   const values = [['Subject', 'HTML Body', 'Date', 'Message ID']];
   const sheet = {
     getLastRow: () => values.length,
@@ -130,9 +131,21 @@ test('imports blocked messages before extraction marks them for deletion', () =>
 
   testContext.SpreadsheetApp.openById = () => ({ getSheetByName: () => sheet });
   testContext.SpreadsheetApp.WrapStrategy = { WRAP: 'WRAP' };
-  testContext.GmailApp = { search: () => [{ getMessages: () => messages }] };
+  const callOrder = [];
+  testContext.Gmail = { Users: { Threads: { remove: () => { } } } };
+  testContext.GmailApp = {
+    getTrashThreads: () => {
+      callOrder.push('trash');
+      return [];
+    },
+    search: () => {
+      callOrder.push('search');
+      return [{ getMessages: () => messages }];
+    },
+  };
   testContext.importF5BotEmails();
 
+  assert.deepEqual(callOrder, ['trash', 'search']);
   assert.deepEqual(values[0], ['Subject', 'HTML Body', 'Date', 'Message ID']);
   assert.equal(values[1][3], 'blocked-id');
   assert.equal(values[2][3], 'allowed-id');
@@ -145,6 +158,7 @@ test('imports blocked messages before extraction marks them for deletion', () =>
   assert.equal(values[1][8], 'd');
   assert.equal(values[2][5], '/r/peloton/');
   assert.equal(values[2][8], '');
+  assert.match(testSetup.logs.find(log => log.includes('Blocked subreddit match:')), /Subreddit \/r\/airbnb_hosts\/; marked Action=d\./);
 });
 
 test('returns empty values when parser snippets are absent', () => {

@@ -186,6 +186,7 @@ function extractSpreadsheetFields() {
   const linkIdx = colIndex['Link'] - 1;
   const commentIdx = colIndex['Comment'] - 1;
   const actionIdx = colIndex[ACTION_COLUMN_NAME] - 1;
+  const messageIdIdx = colIndex[MESSAGE_ID_COLUMN_NAME] - 1;
   const commentCol = colIndex['Comment']; // 1-based, needed for rich text writes below
 
   let processedCount = 0;
@@ -199,6 +200,7 @@ function extractSpreadsheetFields() {
     if (existingSubreddit && isBlockedSubreddit_(existingSubreddit)) {
       row[actionIdx] = 'd';
       markedBlockedCount++;
+      Logger.log(`Blocked subreddit match: row ${r + 2}, Message ID ${row[messageIdIdx]}, Subreddit ${existingSubreddit}; marked Action=d.`);
     }
 
     // Skip rows already processed
@@ -223,6 +225,7 @@ function extractSpreadsheetFields() {
     if (isBlockedSubreddit_(subreddit)) {
       row[actionIdx] = 'd';
       markedBlockedCount++;
+      Logger.log(`Blocked subreddit match: row ${r + 2}, Message ID ${row[messageIdIdx]}, Subreddit ${subreddit}; marked Action=d.`);
     }
 
     if (keyword && comment) {
