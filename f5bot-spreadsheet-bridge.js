@@ -37,7 +37,12 @@ const ACTION_COLUMN_NAME = 'Action';
 const BOILERPLATE = 'Do you have comments or suggestions about F5Bot?';
 const NEW_COLUMNS = ['Keyword', 'Subreddit', 'Link', 'Comment'];
 const KEYWORD_HIGHLIGHT_COLOR = '#8B0000'; // deep red; change to any hex color to adjust the keyword highlight
-const BLOCKED_SUBREDDITS = ['/r/airbnb_hosts/'];
+const BLOCKED_SUBREDDITS = [
+  '/r/airbnb_hosts/',
+  '/r/ShortTermRentals/',
+  '/r/dailygames/',
+  '/r/TraktRejects/',
+];
 
 /**
  * Entry point: runs the full pipeline end to end.
