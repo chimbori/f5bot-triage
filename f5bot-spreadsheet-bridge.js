@@ -36,6 +36,7 @@ const ACTION_COLUMN_NAME = 'Action';
 const BOILERPLATE = 'Do you have comments or suggestions about F5Bot?';
 const NEW_COLUMNS = ['Keyword', 'Subreddit', 'Link', 'Comment'];
 const KEYWORD_HIGHLIGHT_COLOR = '#8B0000'; // deep red; change to any hex color to adjust the keyword highlight
+const BLOCKED_SUBREDDITS = ['/r/airbnb_hosts/'];
 
 /**
  * Entry point: runs the full pipeline end to end.
@@ -167,6 +168,11 @@ function extractSpreadsheetFields() {
       colIndex[name] = newCol;
     }
   });
+  if (!colIndex[ACTION_COLUMN_NAME]) {
+    const actionCol = sheet.getLastColumn() + 1;
+    sheet.getRange(1, actionCol).setValue(ACTION_COLUMN_NAME);
+    colIndex[ACTION_COLUMN_NAME] = actionCol;
+  }
 
   const finalLastCol = sheet.getLastColumn();
   const dataRange = sheet.getRange(2, 1, lastRow - 1, finalLastCol);
@@ -177,13 +183,21 @@ function extractSpreadsheetFields() {
   const subredditIdx = colIndex['Subreddit'] - 1;
   const linkIdx = colIndex['Link'] - 1;
   const commentIdx = colIndex['Comment'] - 1;
+  const actionIdx = colIndex[ACTION_COLUMN_NAME] - 1;
   const commentCol = colIndex['Comment']; // 1-based, needed for rich text writes below
 
   let processedCount = 0;
+  let markedBlockedCount = 0;
   const rowsToHighlight = []; // { rowNumber, comment, keyword }
 
   for (let r = 0; r < data.length; r++) {
     const row = data[r];
+
+    const existingSubreddit = row[subredditIdx] ? row[subredditIdx].toString().trim() : '';
+    if (existingSubreddit && isBlockedSubreddit_(existingSubreddit)) {
+      row[actionIdx] = 'd';
+      markedBlockedCount++;
+    }
 
     // Skip rows already processed
     if (row[keywordIdx] && row[keywordIdx].toString().trim() !== '') continue;
@@ -196,12 +210,18 @@ function extractSpreadsheetFields() {
     // Extract fields from the original HTML before it gets trimmed below.
     const keyword = extractKeyword_(body);
     const comment = extractComment_(body);
+    const subreddit = extractSubreddit_(body);
 
     row[keywordIdx] = keyword;
-    row[subredditIdx] = extractSubreddit_(body);
+    row[subredditIdx] = subreddit;
     row[linkIdx] = extractLink_(body);
     row[commentIdx] = comment;
     row[bodyIdx] = stripBoilerplate_(body);
+
+    if (isBlockedSubreddit_(subreddit)) {
+      row[actionIdx] = 'd';
+      markedBlockedCount++;
+    }
 
     if (keyword && comment) {
       rowsToHighlight.push({ rowNumber: r + 2, comment, keyword }); // +2: data starts at row 2, r is 0-based
@@ -215,7 +235,7 @@ function extractSpreadsheetFields() {
     highlightKeywordInComment_(sheet, rowNumber, commentCol, comment, keyword);
   });
 
-  notify_(`Extracted Keyword, Subreddit, Link, and Comment for ${processedCount} row(s).`);
+  notify_(`Extracted Keyword, Subreddit, Link, and Comment for ${processedCount} row(s). Marked ${markedBlockedCount} blocked row(s) for deletion.`);
 }
 
 /**
@@ -356,6 +376,12 @@ function extractKeyword_(html) {
 function extractSubreddit_(html) {
   const m = html.match(/(\/r\/[^\/)]+\/)/i);
   return m ? m[1] : '';
+}
+
+/** Returns true when an extracted subreddit is on the blocklist. */
+function isBlockedSubreddit_(subreddit) {
+  const value = subreddit.toString().trim().toLowerCase();
+  return BLOCKED_SUBREDDITS.some(blocked => value === blocked.toLowerCase());
 }
 
 /** Extracts and URL-decodes the target link from the first f5bot.com/url?u= redirect. */

@@ -84,6 +84,69 @@ test('extracts fields from every sample email', () => {
   });
 });
 
+test('identifies blocked subreddits in sample emails', () => {
+  assert.equal(context.isBlockedSubreddit_('/r/peloton/'), false);
+  assert.equal(context.isBlockedSubreddit_('/r/ProtonMail/'), false);
+  assert.equal(context.isBlockedSubreddit_(context.extractSubreddit_(loadSample('sample3.txt'))), true);
+  assert.equal(context.isBlockedSubreddit_('/r/AIRBNB_HOSTS/'), true);
+});
+
+test('imports blocked messages before extraction marks them for deletion', () => {
+  const testContext = createScriptContext().context;
+  const values = [['Subject', 'HTML Body', 'Date', 'Message ID']];
+  const sheet = {
+    getLastRow: () => values.length,
+    getLastColumn: () => values[0].length,
+    appendRow: row => values.push([...row]),
+    setFrozenRows: () => { },
+    getRange: (row, column, rowCount = 1, columnCount = 1) => ({
+      getValues: () => values.slice(row - 1, row - 1 + rowCount).map(value => Array.from(
+        { length: columnCount },
+        (_, index) => value[column - 1 + index] ?? '',
+      )),
+      setValue: value => { values[row - 1][column - 1] = value; },
+      setValues: rows => rows.forEach((value, index) => { values[row - 1 + index] = [...value]; }),
+      setWrapStrategy: () => { },
+      setRichTextValue: () => { },
+      getValue: () => values[row - 1][column - 1],
+    }),
+  };
+  const messages = [
+    {
+      getId: () => 'blocked-id',
+      getBody: () => loadSample('sample3.txt'),
+      getSubject: () => 'Blocked',
+      getDate: () => '2026-09-21',
+      isInTrash: () => false,
+    },
+    {
+      getId: () => 'allowed-id',
+      getBody: () => loadSample('sample1.txt'),
+      getSubject: () => 'Allowed',
+      getDate: () => '2026-09-21',
+      isInTrash: () => false,
+    },
+  ];
+
+  testContext.SpreadsheetApp.openById = () => ({ getSheetByName: () => sheet });
+  testContext.SpreadsheetApp.WrapStrategy = { WRAP: 'WRAP' };
+  testContext.GmailApp = { search: () => [{ getMessages: () => messages }] };
+  testContext.importF5BotEmails();
+
+  assert.deepEqual(values[0], ['Subject', 'HTML Body', 'Date', 'Message ID']);
+  assert.equal(values[1][3], 'blocked-id');
+  assert.equal(values[2][3], 'allowed-id');
+
+  testContext.extractSpreadsheetFields();
+
+  assert.equal(values[0][5], 'Subreddit');
+  assert.equal(values[0][8], 'Action');
+  assert.equal(values[1][5], '/r/airbnb_hosts/');
+  assert.equal(values[1][8], 'd');
+  assert.equal(values[2][5], '/r/peloton/');
+  assert.equal(values[2][8], '');
+});
+
 test('returns empty values when parser snippets are absent', () => {
   assert.equal(context.extractKeyword_('<h2>Subject only</h2>'), '');
   assert.equal(context.extractSubreddit_('<p>No subreddit</p>'), '');
