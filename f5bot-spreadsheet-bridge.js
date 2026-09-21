@@ -342,8 +342,14 @@ function stripBoilerplate_(html) {
 
 /** Extracts the search keyword from the <h2>Keyword: "..."</h2> line. */
 function extractKeyword_(html) {
-  const m = html.match(/Keyword:\s*"+([^"]+)"+/i);
-  return m ? m[1].trim() : '';
+  const heading = html.match(/<h2\b[^>]*>\s*Keyword:\s*(?:&quot;|&#34;|&#x22;|")\s*([\s\S]*?)\s*(?:&quot;|&#34;|&#x22;|")\s*<\/h2>/i);
+  if (!heading) return '';
+
+  return heading[1]
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;|&#34;|&#x22;/gi, '"')
+    .trim();
 }
 
 /** Extracts the subreddit (e.g. "/r/CompetitiveApex/") from the post description. */
