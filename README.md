@@ -1,11 +1,11 @@
-# F5Bot Spreadsheet Bridge
+# F5Bot Triage
 
 Google Apps Script pipeline that imports F5Bot Gmail alerts into a Google Sheet, extracts useful fields, highlights keyword matches, and removes unwanted subreddit messages.
 
 ## Setup
 
 1. Open the target Google Sheet and open **Extensions > Apps Script**.
-2. Paste the contents of `f5bot-spreadsheet-bridge.js` into the Apps Script project.
+2. Paste the contents of `f5bot-triage.js` into the Apps Script project.
 3. Update `SHEET_ID`, `SHEET_NAME`, and `GMAIL_QUERY` if needed.
 4. Add the Advanced Gmail service:
    - In Apps Script, open **Services**.
@@ -58,13 +58,13 @@ Add subreddit paths in the same format, including the leading and trailing slash
 The repository includes Node.js tests that use the supplied sample email files:
 
 ```sh
-node --test f5bot-spreadsheet-bridge.test.js
+node --test f5bot-triage.test.js
 ```
 
 The tests do not connect to Gmail or Google Sheets; Apps Script services are mocked locally.
 
 ## Files
 
-- `f5bot-spreadsheet-bridge.js` - Apps Script implementation.
-- `f5bot-spreadsheet-bridge.test.js` - Node.js regression tests.
+- `f5bot-triage.js` - Apps Script implementation.
+- `f5bot-triage.test.js` - Node.js regression tests.
 - `sample1.txt`, `sample2.txt`, `sample3.txt` - sample F5Bot HTML emails used by the tests.
