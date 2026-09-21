@@ -14,7 +14,8 @@
  *
  * SETUP
  * 1. Apps Script editor > paste this in.
- * 2. Run `runAll`, or run the three functions individually.
+ * 2. Add the Advanced Gmail service (`Gmail`) in Apps Script project services.
+ * 3. Run `runAll`, or run the three functions individually.
  *
  * Note: notify_() is used instead of calling SpreadsheetApp.getUi().alert()
  * directly, since getUi() throws when a function is run from a context with
@@ -57,6 +58,7 @@ function runAll() {
  * any extracted fields or Action flags) are never overwritten.
  */
 function importF5BotEmails() {
+  emptyGmailTrash_();
   const sheet = getSheet_();
 
   // Ensure the header row exists.
@@ -309,6 +311,29 @@ function deleteFlaggedMessages() {
 }
 
 // --- Private helpers ---
+
+/** Permanently deletes every thread currently in Gmail Trash. */
+function emptyGmailTrash_() {
+  if (typeof Gmail === 'undefined') {
+    throw new Error('Enable the Advanced Gmail service named "Gmail" in the Apps Script project services.');
+  }
+
+  const pageSize = 100;
+  let deletedCount = 0;
+  let trashThreads;
+
+  do {
+    trashThreads = GmailApp.getTrashThreads(0, pageSize);
+    trashThreads.forEach(thread => {
+      Gmail.Users.Threads.remove('me', thread.getId());
+      deletedCount++;
+    });
+  } while (trashThreads.length === pageSize);
+
+  if (deletedCount > 0) {
+    Logger.log(`Permanently deleted ${deletedCount} thread(s) from Gmail Trash.`);
+  }
+}
 
 /** Gets the F5Bot Mentions sheet, creating it if it doesn't exist. */
 function getSheet_() {
